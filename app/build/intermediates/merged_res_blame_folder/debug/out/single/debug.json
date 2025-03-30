@@ -1,0 +1,146 @@
+[
+    {
+        "merged": "com.example.patienttracker.app-merged_res-33:/drawable_bg_rounded_tag.xml.flat",
+        "source": "com.example.patienttracker.app-main-35:/drawable/bg_rounded_tag.xml"
+    },
+    {
+        "merged": "com.example.patienttracker.app-merged_res-33:/layout_activity_register.xml.flat",
+        "source": "com.example.patienttracker.app-main-35:/layout/activity_register.xml"
+    },
+    {
+        "merged": "com.example.patienttracker.app-merged_res-33:/menu_admin_bottom_navigation_menu.xml.flat",
+        "source": "com.example.patienttracker.app-main-35:/menu/admin_bottom_navigation_menu.xml"
+    },
+    {
+        "merged": "com.example.patienttracker.app-merged_res-33:/drawable_ic_approvals.xml.flat",
+        "source": "com.example.patienttracker.app-main-35:/drawable/ic_approvals.xml"
+    },
+    {
+        "merged": "com.example.patienttracker.app-merged_res-33:/layout_dialog_add_medical_record.xml.flat",
+        "source": "com.example.patienttracker.app-main-35:/layout/dialog_add_medical_record.xml"
+    },
+    {
+        "merged": "com.example.patienttracker.app-merged_res-33:/layout_activity_patient_dashboard.xml.flat",
+        "source": "com.example.patienttracker.app-main-35:/layout/activity_patient_dashboard.xml"
+    },
+    {
+        "merged": "com.example.patienttracker.app-merged_res-33:/layout_activity_main.xml.flat",
+        "source": "com.example.patienttracker.app-main-35:/layout/activity_main.xml"
+    },
+    {
+        "merged": "com.example.patienttracker.app-merged_res-33:/layout_activity_doctor_dashboard.xml.flat",
+        "source": "com.example.patienttracker.app-main-35:/layout/activity_doctor_dashboard.xml"
+    },
+    {
+        "merged": "com.example.patienttracker.app-merged_res-33:/layout_activity_login.xml.flat",
+        "source": "com.example.patienttracker.app-main-35:/layout/activity_login.xml"
+    },
+    {
+        "merged": "com.example.patienttracker.app-merged_res-33:/layout_fragment_appointments.xml.flat",
+        "source": "com.example.patienttracker.app-main-35:/layout/fragment_appointments.xml"
+    },
+    {
+        "merged": "com.example.patienttracker.app-merged_res-33:/layout_fragment_approvals.xml.flat",
+        "source": "com.example.patienttracker.app-main-35:/layout/fragment_approvals.xml"
+    },
+    {
+        "merged": "com.example.patienttracker.app-merged_res-33:/layout_fragment_medical_records.xml.flat",
+        "source": "com.example.patienttracker.app-main-35:/layout/fragment_medical_records.xml"
+    },
+    {
+        "merged": "com.example.patienttracker.app-merged_res-33:/layout_item_notification.xml.flat",
+        "source": "com.example.patienttracker.app-main-35:/layout/item_notification.xml"
+    },
+    {
+        "merged": "com.example.patienttracker.app-merged_res-33:/drawable_ic_profile.xml.flat",
+        "source": "com.example.patienttracker.app-main-35:/drawable/ic_profile.xml"
+    },
+    {
+        "merged": "com.example.patienttracker.app-merged_res-33:/xml_provider_paths.xml.flat",
+        "source": "com.example.patienttracker.app-main-35:/xml/provider_paths.xml"
+    },
+    {
+        "merged": "com.example.patienttracker.app-merged_res-33:/drawable_ic_settings.xml.flat",
+        "source": "com.example.patienttracker.app-main-35:/drawable/ic_settings.xml"
+    },
+    {
+        "merged": "com.example.patienttracker.app-merged_res-33:/layout_activity_admin_dashboard.xml.flat",
+        "source": "com.example.patienttracker.app-main-35:/layout/activity_admin_dashboard.xml"
+    },
+    {
+        "merged": "com.example.patienttracker.app-merged_res-33:/drawable_app_logo.xml.flat",
+        "source": "com.example.patienttracker.app-main-35:/drawable/app_logo.xml"
+    },
+    {
+        "merged": "com.example.patienttracker.app-merged_res-33:/menu_doctor_bottom_navigation_menu.xml.flat",
+        "source": "com.example.patienttracker.app-main-35:/menu/doctor_bottom_navigation_menu.xml"
+    },
+    {
+        "merged": "com.example.patienttracker.app-merged_res-33:/drawable_ic_notifications.xml.flat",
+        "source": "com.example.patienttracker.app-main-35:/drawable/ic_notifications.xml"
+    },
+    {
+        "merged": "com.example.patienttracker.app-merged_res-33:/layout_fragment_profile.xml.flat",
+        "source": "com.example.patienttracker.app-main-35:/layout/fragment_profile.xml"
+    },
+    {
+        "merged": "com.example.patienttracker.app-merged_res-33:/menu_menu_admin_bottom_nav.xml.flat",
+        "source": "com.example.patienttracker.app-main-35:/menu/menu_admin_bottom_nav.xml"
+    },
+    {
+        "merged": "com.example.patienttracker.app-merged_res-33:/drawable_ic_calendar.xml.flat",
+        "source": "com.example.patienttracker.app-main-35:/drawable/ic_calendar.xml"
+    },
+    {
+        "merged": "com.example.patienttracker.app-merged_res-33:/layout_fragment_users.xml.flat",
+        "source": "com.example.patienttracker.app-main-35:/layout/fragment_users.xml"
+    },
+    {
+        "merged": "com.example.patienttracker.app-merged_res-33:/drawable_ic_patients.xml.flat",
+        "source": "com.example.patienttracker.app-main-35:/drawable/ic_patients.xml"
+    },
+    {
+        "merged": "com.example.patienttracker.app-merged_res-33:/layout_fragment_notifications.xml.flat",
+        "source": "com.example.patienttracker.app-main-35:/layout/fragment_notifications.xml"
+    },
+    {
+        "merged": "com.example.patienttracker.app-merged_res-33:/layout_item_appointment.xml.flat",
+        "source": "com.example.patienttracker.app-main-35:/layout/item_appointment.xml"
+    },
+    {
+        "merged": "com.example.patienttracker.app-merged_res-33:/drawable_bg_role_tag.xml.flat",
+        "source": "com.example.patienttracker.app-main-35:/drawable/bg_role_tag.xml"
+    },
+    {
+        "merged": "com.example.patienttracker.app-merged_res-33:/layout_item_medical_record.xml.flat",
+        "source": "com.example.patienttracker.app-main-35:/layout/item_medical_record.xml"
+    },
+    {
+        "merged": "com.example.patienttracker.app-merged_res-33:/layout_dialog_medical_record_details.xml.flat",
+        "source": "com.example.patienttracker.app-main-35:/layout/dialog_medical_record_details.xml"
+    },
+    {
+        "merged": "com.example.patienttracker.app-merged_res-33:/drawable_ic_records.xml.flat",
+        "source": "com.example.patienttracker.app-main-35:/drawable/ic_records.xml"
+    },
+    {
+        "merged": "com.example.patienttracker.app-merged_res-33:/menu_menu_admin_dashboard.xml.flat",
+        "source": "com.example.patienttracker.app-main-35:/menu/menu_admin_dashboard.xml"
+    },
+    {
+        "merged": "com.example.patienttracker.app-merged_res-33:/menu_patient_bottom_navigation_menu.xml.flat",
+        "source": "com.example.patienttracker.app-main-35:/menu/patient_bottom_navigation_menu.xml"
+    },
+    {
+        "merged": "com.example.patienttracker.app-merged_res-33:/layout_item_approval.xml.flat",
+        "source": "com.example.patienttracker.app-main-35:/layout/item_approval.xml"
+    },
+    {
+        "merged": "com.example.patienttracker.app-merged_res-33:/layout_item_user.xml.flat",
+        "source": "com.example.patienttracker.app-main-35:/layout/item_user.xml"
+    },
+    {
+        "merged": "com.example.patienttracker.app-merged_res-33:/drawable_ic_users.xml.flat",
+        "source": "com.example.patienttracker.app-main-35:/drawable/ic_users.xml"
+    }
+]

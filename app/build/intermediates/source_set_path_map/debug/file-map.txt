@@ -1,0 +1,36 @@
+com.example.patienttracker.app-core-1.7.0-0 C:\Users\cluxs\.gradle\caches\8.10\transforms\0b849364f643a45c9e6106f6931bb2fc\transformed\core-1.7.0\res
+com.example.patienttracker.app-constraintlayout-2.1.3-1 C:\Users\cluxs\.gradle\caches\8.10\transforms\1904a4170ae5e120e7fc9414fe5c2698\transformed\constraintlayout-2.1.3\res
+com.example.patienttracker.app-jetified-startup-runtime-1.0.0-2 C:\Users\cluxs\.gradle\caches\8.10\transforms\1a347d1f54e84f65b78d205084227c2f\transformed\jetified-startup-runtime-1.0.0\res
+com.example.patienttracker.app-jetified-emoji2-1.0.0-3 C:\Users\cluxs\.gradle\caches\8.10\transforms\1a8d9c01a81570f18949c23f4907909e\transformed\jetified-emoji2-1.0.0\res
+com.example.patienttracker.app-jetified-appcompat-resources-1.4.1-4 C:\Users\cluxs\.gradle\caches\8.10\transforms\33f44c946851d8d915c09248faf5cb8f\transformed\jetified-appcompat-resources-1.4.1\res
+com.example.patienttracker.app-jetified-lifecycle-process-2.4.0-5 C:\Users\cluxs\.gradle\caches\8.10\transforms\360bdb6a798c3618a5d7c138376b6f5c\transformed\jetified-lifecycle-process-2.4.0\res
+com.example.patienttracker.app-material-1.6.0-6 C:\Users\cluxs\.gradle\caches\8.10\transforms\39c3982ebaad163e9524154483785923\transformed\material-1.6.0\res
+com.example.patienttracker.app-lifecycle-runtime-2.4.0-7 C:\Users\cluxs\.gradle\caches\8.10\transforms\5f84fc0cacafdbb50c2540f1dfd41fc7\transformed\lifecycle-runtime-2.4.0\res
+com.example.patienttracker.app-cardview-1.0.0-8 C:\Users\cluxs\.gradle\caches\8.10\transforms\643e753061b4dccd9e39de5bbafc7df0\transformed\cardview-1.0.0\res
+com.example.patienttracker.app-jetified-emoji2-views-helper-1.0.0-9 C:\Users\cluxs\.gradle\caches\8.10\transforms\70e152c15bd573a57a3dca0b8e430191\transformed\jetified-emoji2-views-helper-1.0.0\res
+com.example.patienttracker.app-jetified-firebase-messaging-23.0.4-10 C:\Users\cluxs\.gradle\caches\8.10\transforms\8328c84564581380fe094554e75fb9c5\transformed\jetified-firebase-messaging-23.0.4\res
+com.example.patienttracker.app-jetified-play-services-basement-18.0.0-11 C:\Users\cluxs\.gradle\caches\8.10\transforms\8b7aaf43e279bddb800504813b2fcf67\transformed\jetified-play-services-basement-18.0.0\res
+com.example.patienttracker.app-recyclerview-1.1.0-12 C:\Users\cluxs\.gradle\caches\8.10\transforms\945e621410a8236bb1b2ab9b5e89555d\transformed\recyclerview-1.1.0\res
+com.example.patienttracker.app-jetified-glide-4.13.0-13 C:\Users\cluxs\.gradle\caches\8.10\transforms\94749c5f879310f29e1e0fd63384a31e\transformed\jetified-glide-4.13.0\res
+com.example.patienttracker.app-coordinatorlayout-1.1.0-14 C:\Users\cluxs\.gradle\caches\8.10\transforms\a0964698105bf9190f9548bd5390e343\transformed\coordinatorlayout-1.1.0\res
+com.example.patienttracker.app-jetified-savedstate-1.1.0-15 C:\Users\cluxs\.gradle\caches\8.10\transforms\a723684714f61ecaee01db074b465fb3\transformed\jetified-savedstate-1.1.0\res
+com.example.patienttracker.app-transition-1.2.0-16 C:\Users\cluxs\.gradle\caches\8.10\transforms\af32ee86702ed85c5d794a3d903f569f\transformed\transition-1.2.0\res
+com.example.patienttracker.app-drawerlayout-1.1.1-17 C:\Users\cluxs\.gradle\caches\8.10\transforms\b7852d7a809e5ff99a4f738b8c701048\transformed\drawerlayout-1.1.1\res
+com.example.patienttracker.app-browser-1.0.0-18 C:\Users\cluxs\.gradle\caches\8.10\transforms\b83fa8e4c738c1610724f8bf67933a2a\transformed\browser-1.0.0\res
+com.example.patienttracker.app-appcompat-1.4.1-19 C:\Users\cluxs\.gradle\caches\8.10\transforms\c6b6cb57ad5b1b086ff746420e82c1ff\transformed\appcompat-1.4.1\res
+com.example.patienttracker.app-jetified-firebase-common-20.1.1-20 C:\Users\cluxs\.gradle\caches\8.10\transforms\d26325d10b373edb726ab8bf8176e743\transformed\jetified-firebase-common-20.1.1\res
+com.example.patienttracker.app-jetified-play-services-base-18.0.1-21 C:\Users\cluxs\.gradle\caches\8.10\transforms\d2ae80a32ecd2407403be5abb02c3960\transformed\jetified-play-services-base-18.0.1\res
+com.example.patienttracker.app-media-1.0.0-22 C:\Users\cluxs\.gradle\caches\8.10\transforms\dc5ad16d27f5d6ad290f37e9dc9a553c\transformed\media-1.0.0\res
+com.example.patienttracker.app-fragment-1.3.6-23 C:\Users\cluxs\.gradle\caches\8.10\transforms\dd309e026334a825490efc07edbc57e0\transformed\fragment-1.3.6\res
+com.example.patienttracker.app-jetified-viewpager2-1.0.0-24 C:\Users\cluxs\.gradle\caches\8.10\transforms\dde1f641c1953fae2ce855b115d82651\transformed\jetified-viewpager2-1.0.0\res
+com.example.patienttracker.app-lifecycle-viewmodel-2.3.1-25 C:\Users\cluxs\.gradle\caches\8.10\transforms\e2b5bb233e9973d051d803823ab2d80f\transformed\lifecycle-viewmodel-2.3.1\res
+com.example.patienttracker.app-jetified-annotation-experimental-1.1.0-26 C:\Users\cluxs\.gradle\caches\8.10\transforms\eb6496427d02e5e1a0c69280ba83c281\transformed\jetified-annotation-experimental-1.1.0\res
+com.example.patienttracker.app-jetified-circleimageview-3.1.0-27 C:\Users\cluxs\.gradle\caches\8.10\transforms\efc1723cc40ad7bccacb9cf039488801\transformed\jetified-circleimageview-3.1.0\res
+com.example.patienttracker.app-google-services-28 E:\Patient Tracker\PatientTrackerAmityClient\PatientTrackerApp\app\build\generated\res\google-services\debug
+com.example.patienttracker.app-pngs-29 E:\Patient Tracker\PatientTrackerAmityClient\PatientTrackerApp\app\build\generated\res\pngs\debug
+com.example.patienttracker.app-resValues-30 E:\Patient Tracker\PatientTrackerAmityClient\PatientTrackerApp\app\build\generated\res\resValues\debug
+com.example.patienttracker.app-packageDebugResources-31 E:\Patient Tracker\PatientTrackerAmityClient\PatientTrackerApp\app\build\intermediates\incremental\debug\packageDebugResources\merged.dir
+com.example.patienttracker.app-packageDebugResources-32 E:\Patient Tracker\PatientTrackerAmityClient\PatientTrackerApp\app\build\intermediates\incremental\debug\packageDebugResources\stripped.dir
+com.example.patienttracker.app-merged_res-33 E:\Patient Tracker\PatientTrackerAmityClient\PatientTrackerApp\app\build\intermediates\merged_res\debug
+com.example.patienttracker.app-debug-34 E:\Patient Tracker\PatientTrackerAmityClient\PatientTrackerApp\app\src\debug\res
+com.example.patienttracker.app-main-35 E:\Patient Tracker\PatientTrackerAmityClient\PatientTrackerApp\app\src\main\res

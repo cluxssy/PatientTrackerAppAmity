@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    
+    <!-- Theme Colors -->
+    <color name="primary">#3F51B5</color>
+    <color name="primary_dark">#303F9F</color>
+    <color name="primary_light">#C5CAE9</color>
+    <color name="accent">#FF4081</color>
+    <color name="text_primary">#212121</color>
+    <color name="text_secondary">#757575</color>
+    <color name="divider">#BDBDBD</color>
+    
+    <!-- Material colors for compatibility with older themes -->
+    <color name="colorPrimary">#3F51B5</color>
+    <color name="colorPrimaryDark">#303F9F</color>
+    <color name="colorAccent">#FF4081</color>
+    <color name="colorSecondary">#FF4081</color>
+    <color name="colorTextPrimary">#212121</color>
+    <color name="colorTextSecondary">#757575</color>
+    <color name="colorBackground">#FFFFFF</color>
+    
+    <!-- Role Tag Colors -->
+    <color name="patient_color">#4CAF50</color>
+    <color name="doctor_color">#2196F3</color>
+    <color name="admin_color">#9C27B0</color>
+    
+    <!-- Status Colors -->
+    <color name="pending_color">#FFC107</color>
+    <color name="rejected_color">#F44336</color>
+    <color name="approved_color">#4CAF50</color>
+</resources>

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "577298539784",
+    "project_id": "patienttracker-7f5f3",
+    "storage_bucket": "patienttracker-7f5f3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:577298539784:android:aeb08aab9701dd92e0f8bd",
+        "android_client_info": {
+          "package_name": "com.example.patienttracker"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCgLQ9OonIgulW35GGV4gQeSghaROa1EDY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
