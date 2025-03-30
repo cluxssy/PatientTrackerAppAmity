@@ -51,6 +51,7 @@ import java.util.UUID;
 
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
+import android.content.Context;
 
 /**
  * Main activity for doctors.
@@ -154,15 +155,12 @@ public class DoctorDashboardActivity extends AppCompatActivity implements Naviga
             } else if (itemId == R.id.nav_patients) {
                 fragment = new PatientsPlaceholderFragment();
             } else if (itemId == R.id.nav_profile) {
-                fragment = new ProfilePlaceholderFragment();
+                // Use the reusable ProfileFragment instead of ProfilePlaceholderFragment
+                fragment = new ProfileFragment();
                 Bundle args = new Bundle();
                 if (currentUser != null) {
-                    args.putString("USER_NAME", currentUser.getFullName());
-                    args.putString("USER_EMAIL", currentUser.getEmail());
-                    // Add doctor-specific fields
-                    args.putString("USER_SPECIALIZATION", currentUser.getSpecialization());
-                    args.putString("USER_DEPARTMENT", currentUser.getDepartment());
-                    args.putInt("USER_EXPERIENCE", currentUser.getYearsOfExperience());
+                    // ProfileFragment expects the entire User object with key "USER"
+                    args.putSerializable("USER", currentUser);
                 }
                 fragment.setArguments(args);
             }
@@ -283,6 +281,35 @@ public class DoctorDashboardActivity extends AppCompatActivity implements Naviga
     }
 
     /**
+     * Helper method to show reschedule dialog from adapter
+     * This acts as a bridge between the adapter and the fragment
+     */
+    public void showRescheduleDialogFromAdapter(Map<String, Object> appointment, String appointmentId, String patientId) {
+        // Find the appointments fragment and call its showRescheduleDialog method
+        Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.frame_container);
+        if (fragment != null) {
+            // If we have a fragment container, check if it contains an appointment fragment
+            if (fragment instanceof AppointmentsPlaceholderFragment) {
+                ((AppointmentsPlaceholderFragment) fragment).showRescheduleDialog(appointment, appointmentId, patientId);
+                return;
+            }
+        }
+
+        // If we can't find the fragment directly, look for it in the current fragments
+        List<Fragment> fragments = getSupportFragmentManager().getFragments();
+        for (Fragment f : fragments) {
+            if (f instanceof AppointmentsPlaceholderFragment) {
+                ((AppointmentsPlaceholderFragment) f).showRescheduleDialog(appointment, appointmentId, patientId);
+                return;
+            }
+        }
+
+        // If we still can't find it, create a new instance of the fragment and show dialog
+        AppointmentsPlaceholderFragment newFragment = new AppointmentsPlaceholderFragment();
+        newFragment.showRescheduleDialog(appointment, appointmentId, patientId);
+    }
+
+    /**
      * Static Fragment class for Appointments view
      */
     public static class AppointmentsPlaceholderFragment extends Fragment {
@@ -294,14 +321,6 @@ public class DoctorDashboardActivity extends AppCompatActivity implements Naviga
 
         // Static import instead of class reference
         private static final String LOG_TAG = "AppointmentsFragment";
-
-        /**
-         * Public method to send a notification to a patient
-         * This mirrors the method in PatientsPlaceholderFragment to avoid ClassCastException
-         */
-        public void sendNotificationToPatient(String patientId, String title, String message, String appointmentId) {
-            sendAppointmentNotification(patientId, title, message, appointmentId);
-        }
 
         // Method to send a notification about appointment changes
         private void sendAppointmentNotification(String patientId, String title, String message, String appointmentId) {
@@ -391,7 +410,7 @@ public class DoctorDashboardActivity extends AppCompatActivity implements Naviga
         }
 
         // Method to show date/time picker dialog for rescheduling
-        private void showRescheduleDialog(Map<String, Object> appointment, String appointmentId, String patientId) {
+        public void showRescheduleDialog(Map<String, Object> appointment, String appointmentId, String patientId) {
             // Get current date as default
             final Calendar calendar = Calendar.getInstance();
             int year = calendar.get(Calendar.YEAR);
@@ -1005,8 +1024,20 @@ public class DoctorDashboardActivity extends AppCompatActivity implements Naviga
                         rescheduleButton.setOnClickListener(v -> {
                             String appointmentId = appointment.get("id").toString();
 
-                            // Show the date/time picker dialog for rescheduling
-                            showRescheduleDialog(appointment, appointmentId, appointment.get("patientId").toString());
+                            // Use the patientId that's already defined in the outer scope rather than declaring a new one
+                            // Create a dialog in the current context instead of trying to access the fragment
+                            // This is more reliable as it doesn't depend on fragment navigation structure
+                            Context context = layout.getContext();
+                            if (context instanceof DoctorDashboardActivity) {
+                                // Call the activity's showRescheduleDialog method
+                                ((DoctorDashboardActivity) context).showRescheduleDialogFromAdapter(
+                                        appointment, appointmentId, patientId);
+                            } else {
+                                // Fallback to a simple toast message
+                                Toast.makeText(context,
+                                        "Please navigate to the Appointments tab to reschedule",
+                                        Toast.LENGTH_SHORT).show();
+                            }
                         });
 
                         buttonLayout.addView(cancelButton);
@@ -1612,199 +1643,6 @@ public class DoctorDashboardActivity extends AppCompatActivity implements Naviga
                     }
                 }
             }
-        }
-    }
-
-    /**
-     * Static Fragment class for Profile view
-     */
-    public static class ProfilePlaceholderFragment extends Fragment {
-        @Override
-        public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-            // Create a scrollable layout for profile
-            ScrollView scrollView = new ScrollView(getContext());
-            scrollView.setLayoutParams(new ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT));
-
-            LinearLayout layout = new LinearLayout(getContext());
-            layout.setOrientation(LinearLayout.VERTICAL);
-            layout.setGravity(Gravity.CENTER_HORIZONTAL);
-            layout.setPadding(30, 50, 30, 30);
-
-            // Add card view for profile info
-            CardView profileCard = new CardView(getContext());
-            profileCard.setLayoutParams(new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT));
-            profileCard.setRadius(16);
-            profileCard.setElevation(8);
-            profileCard.setUseCompatPadding(true);
-            profileCard.setContentPadding(20, 20, 20, 20);
-
-            LinearLayout cardLayout = new LinearLayout(getContext());
-            cardLayout.setOrientation(LinearLayout.VERTICAL);
-
-            TextView titleText = new TextView(getContext());
-            titleText.setText("Doctor Profile");
-            titleText.setTextSize(22);
-            titleText.setTypeface(null, android.graphics.Typeface.BOLD);
-            titleText.setGravity(Gravity.CENTER);
-            titleText.setPadding(0, 0, 0, 30);
-            cardLayout.addView(titleText);
-
-            String userName = "";
-            String userEmail = "";
-            String userSpecialization = "";
-            String userDepartment = "";
-            int userExperience = 0;
-
-            // Get user data from arguments
-            if (getArguments() != null) {
-                userName = getArguments().getString("USER_NAME", "");
-                userEmail = getArguments().getString("USER_EMAIL", "");
-                userSpecialization = getArguments().getString("USER_SPECIALIZATION", "");
-                userDepartment = getArguments().getString("USER_DEPARTMENT", "");
-                userExperience = getArguments().getInt("USER_EXPERIENCE", 0);
-            }
-
-            if (!userName.isEmpty()) {
-                // Name
-                TextView nameLabel = new TextView(getContext());
-                nameLabel.setText("Full Name:");
-                nameLabel.setTextSize(16);
-                nameLabel.setTypeface(null, android.graphics.Typeface.BOLD);
-                cardLayout.addView(nameLabel);
-
-                TextView nameText = new TextView(getContext());
-                nameText.setText(userName);
-                nameText.setTextSize(16);
-                nameText.setPadding(0, 0, 0, 20);
-                cardLayout.addView(nameText);
-
-                // Email
-                TextView emailLabel = new TextView(getContext());
-                emailLabel.setText("Email Address:");
-                emailLabel.setTextSize(16);
-                emailLabel.setTypeface(null, android.graphics.Typeface.BOLD);
-                cardLayout.addView(emailLabel);
-
-                TextView emailText = new TextView(getContext());
-                emailText.setText(userEmail);
-                emailText.setTextSize(16);
-                emailText.setPadding(0, 0, 0, 20);
-                cardLayout.addView(emailText);
-
-                // Role
-                TextView roleLabel = new TextView(getContext());
-                roleLabel.setText("Role:");
-                roleLabel.setTextSize(16);
-                roleLabel.setTypeface(null, android.graphics.Typeface.BOLD);
-                cardLayout.addView(roleLabel);
-
-                TextView roleText = new TextView(getContext());
-                roleText.setText("Doctor");
-                roleText.setTextSize(16);
-                roleText.setPadding(0, 0, 0, 20);
-                cardLayout.addView(roleText);
-
-                // Add specialization if available
-                if (!userSpecialization.isEmpty()) {
-                    TextView specLabel = new TextView(getContext());
-                    specLabel.setText("Specialization:");
-                    specLabel.setTextSize(16);
-                    specLabel.setTypeface(null, android.graphics.Typeface.BOLD);
-                    cardLayout.addView(specLabel);
-
-                    TextView specText = new TextView(getContext());
-                    specText.setText(userSpecialization);
-                    specText.setTextSize(16);
-                    specText.setPadding(0, 0, 0, 20);
-                    cardLayout.addView(specText);
-                }
-
-                // Add department if available
-                if (!userDepartment.isEmpty()) {
-                    TextView deptLabel = new TextView(getContext());
-                    deptLabel.setText("Department:");
-                    deptLabel.setTextSize(16);
-                    deptLabel.setTypeface(null, android.graphics.Typeface.BOLD);
-                    cardLayout.addView(deptLabel);
-
-                    TextView deptText = new TextView(getContext());
-                    deptText.setText(userDepartment);
-                    deptText.setTextSize(16);
-                    deptText.setPadding(0, 0, 0, 20);
-                    cardLayout.addView(deptText);
-                }
-
-                // Add experience if available
-                if (userExperience > 0) {
-                    TextView expLabel = new TextView(getContext());
-                    expLabel.setText("Years of Experience:");
-                    expLabel.setTextSize(16);
-                    expLabel.setTypeface(null, android.graphics.Typeface.BOLD);
-                    cardLayout.addView(expLabel);
-
-                    TextView expText = new TextView(getContext());
-                    expText.setText(String.valueOf(userExperience));
-                    expText.setTextSize(16);
-                    expText.setPadding(0, 0, 0, 20);
-                    cardLayout.addView(expText);
-                }
-
-            } else {
-                TextView errorText = new TextView(getContext());
-                errorText.setText("User information is not available");
-                errorText.setTextSize(16);
-                errorText.setGravity(Gravity.CENTER);
-                cardLayout.addView(errorText);
-            }
-
-            // Add card to main layout
-            profileCard.addView(cardLayout);
-            layout.addView(profileCard);
-
-            // Add logout button
-            Button logoutButton = new Button(getContext());
-            logoutButton.setText("Logout");
-            logoutButton.setLayoutParams(new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT));
-            logoutButton.setPadding(20, 20, 20, 20);
-            logoutButton.setBackgroundColor(getResources().getColor(R.color.colorAccent));
-            logoutButton.setTextColor(getResources().getColor(android.R.color.white));
-            LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT);
-            buttonParams.setMargins(0, 40, 0, 0);
-            logoutButton.setLayoutParams(buttonParams);
-
-            // Set logout button click listener
-            logoutButton.setOnClickListener(view -> {
-                // Show confirmation dialog
-                new AlertDialog.Builder(getContext())
-                        .setTitle("Logout")
-                        .setMessage("Are you sure you want to logout?")
-                        .setPositiveButton("Yes", (dialog, which) -> {
-                            // Sign out from Firebase using FirebaseUtil to handle errors properly
-                            FirebaseUtil.signOut();
-
-                            // Navigate to login screen
-                            Intent intent = new Intent(getActivity(), LoginActivity.class);
-                            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                            startActivity(intent);
-                            getActivity().finish();
-                        })
-                        .setNegativeButton("No", null)
-                        .show();
-            });
-
-            layout.addView(logoutButton);
-
-            // Add the main layout to scrollview
-            scrollView.addView(layout);
-            return scrollView;
         }
     }
 

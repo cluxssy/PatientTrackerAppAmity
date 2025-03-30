@@ -1,0 +1,4 @@
+com.example.patienttracker.test.app-androidTest-0 E:\Patient Tracker\PatientTrackerAmityClient\PatientTrackerApp\app\build\generated\res\resValues\androidTest\debug
+com.example.patienttracker.test.app-mergeDebugAndroidTestResources-1 E:\Patient Tracker\PatientTrackerAmityClient\PatientTrackerApp\app\build\intermediates\incremental\debugAndroidTest\mergeDebugAndroidTestResources\merged.dir
+com.example.patienttracker.test.app-mergeDebugAndroidTestResources-2 E:\Patient Tracker\PatientTrackerAmityClient\PatientTrackerApp\app\build\intermediates\incremental\debugAndroidTest\mergeDebugAndroidTestResources\stripped.dir
+com.example.patienttracker.test.app-merged_res-3 E:\Patient Tracker\PatientTrackerAmityClient\PatientTrackerApp\app\build\intermediates\merged_res\debugAndroidTest
