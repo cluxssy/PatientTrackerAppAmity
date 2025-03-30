@@ -159,6 +159,9 @@ public class AdminDashboardActivity extends AppCompatActivity implements BottomN
             } else if (itemId == R.id.nav_notifications) {
                 viewName = "Notifications View";
                 title = getString(R.string.title_admin_dashboard) + " - " + getString(R.string.nav_notifications);
+            } else if (itemId == R.id.nav_profile) {
+                viewName = "Profile View";
+                title = getString(R.string.title_admin_dashboard) + " - " + getString(R.string.profile);
             }
 
             // Use the appropriate fragment based on the selected menu item
@@ -182,6 +185,13 @@ public class AdminDashboardActivity extends AppCompatActivity implements BottomN
                 Bundle args = new Bundle();
                 args.putString("VIEW_NAME", viewName);
                 args.putSerializable("CURRENT_USER", currentUser);
+                fragment.setArguments(args);
+            } else if (itemId == R.id.nav_profile) {
+                // Use the real ProfileFragment for admin profiles
+                fragment = new com.example.patienttracker.fragments.ProfileFragment();
+                Bundle args = new Bundle();
+                // Pass the user object as serializable
+                args.putSerializable("USER", currentUser);
                 fragment.setArguments(args);
             }
 
