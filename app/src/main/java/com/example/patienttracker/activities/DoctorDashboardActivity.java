@@ -60,15 +60,25 @@ import android.content.Context;
  */
 public class DoctorDashboardActivity extends AppCompatActivity implements NavigationBarView.OnItemSelectedListener {
 
+    private static final String TAG = "DoctorDashboardActivity";
+
     private BottomNavigationView bottomNavigationView;
     private User currentUser;
     private ListenerRegistration notificationListener;
     private int unreadNotificationCount = 0;
+    private View progressOverlay;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_doctor_dashboard);
+
+        // Initialize progress overlay
+        progressOverlay = findViewById(R.id.progress_overlay);
+        if (progressOverlay == null) {
+            // If progress overlay doesn't exist in the layout, log a warning
+            Log.w(TAG, "Progress overlay view not found in layout");
+        }
 
         try {
             // Get user data from intent as individual properties
@@ -78,12 +88,12 @@ public class DoctorDashboardActivity extends AppCompatActivity implements Naviga
             int userRole = getIntent().getIntExtra("USER_ROLE", -1);
             int userStatus = getIntent().getIntExtra("USER_STATUS", -1);
 
-            // Create User object from individual properties
+            // Create initial User object from individual properties
             if (userId != null && userEmail != null && userName != null && userRole == User.ROLE_DOCTOR) {
                 currentUser = new User(userId, userEmail, userName, userRole);
                 currentUser.setStatus(userStatus);
 
-                // Also get doctor-specific fields
+                // Also get doctor-specific fields from intent
                 if (getIntent().hasExtra("USER_SPECIALIZATION")) {
                     currentUser.setSpecialization(getIntent().getStringExtra("USER_SPECIALIZATION"));
                 }
@@ -93,6 +103,31 @@ public class DoctorDashboardActivity extends AppCompatActivity implements Naviga
                 if (getIntent().hasExtra("USER_EXPERIENCE")) {
                     currentUser.setYearsOfExperience(getIntent().getIntExtra("USER_EXPERIENCE", 0));
                 }
+
+                // Show progress indicator while fetching complete user data
+                showProgressIndicator(true);
+
+                // Fetch full user data from Firestore for comprehensive profile information
+                FirebaseFirestore.getInstance().collection("users").document(userId)
+                        .get()
+                        .addOnSuccessListener(documentSnapshot -> {
+                            showProgressIndicator(false);
+                            if (documentSnapshot.exists()) {
+                                Log.d(TAG, "Successfully fetched full user data from Firestore");
+                                // Replace basic user with complete user data
+                                User completeUser = createUserFromDocument(documentSnapshot);
+                                if (completeUser != null) {
+                                    currentUser = completeUser;
+                                    Log.d(TAG, "Updated user with complete profile data: " + currentUser.toString());
+                                }
+                            } else {
+                                Log.w(TAG, "User document doesn't exist for ID: " + userId);
+                            }
+                        })
+                        .addOnFailureListener(e -> {
+                            showProgressIndicator(false);
+                            Log.e(TAG, "Error fetching full user data: " + e.getMessage(), e);
+                        });
             } else {
                 // Invalid user data or not a doctor, go back to login
                 Toast.makeText(this, "Invalid user or insufficient permissions", Toast.LENGTH_LONG).show();
@@ -155,14 +190,64 @@ public class DoctorDashboardActivity extends AppCompatActivity implements Naviga
             } else if (itemId == R.id.nav_patients) {
                 fragment = new PatientsPlaceholderFragment();
             } else if (itemId == R.id.nav_profile) {
-                // Use the reusable ProfileFragment instead of ProfilePlaceholderFragment
-                fragment = new ProfileFragment();
-                Bundle args = new Bundle();
-                if (currentUser != null) {
-                    // ProfileFragment expects the entire User object with key "USER"
-                    args.putSerializable("USER", currentUser);
-                }
-                fragment.setArguments(args);
+                // Show loading indicator
+                showProgressIndicator(true);
+
+                // Fetch the complete user profile from Firestore before creating the fragment
+                FirebaseFirestore.getInstance().collection("users")
+                        .document(currentUser.getUid())
+                        .get()
+                        .addOnSuccessListener(documentSnapshot -> {
+                            // Hide loading indicator
+                            showProgressIndicator(false);
+
+                            User fullUserProfile;
+                            if (documentSnapshot.exists()) {
+                                // Create a complete user object from the Firestore document
+                                fullUserProfile = createUserFromDocument(documentSnapshot);
+
+                                if (fullUserProfile == null) {
+                                    // If document exists but mapping failed, use the current basic user object
+                                    fullUserProfile = currentUser;
+                                    Log.w(TAG, "Could not create user from document, using basic user info");
+                                }
+                            } else {
+                                // If user document doesn't exist, use the current basic user object
+                                fullUserProfile = currentUser;
+                                Log.w(TAG, "User document not found in Firestore, using basic user info");
+                            }
+
+                            // Create the fragment with the full user profile
+                            ProfileFragment profileFragment = new ProfileFragment();
+                            Bundle args = new Bundle();
+                            args.putSerializable("USER", fullUserProfile);
+                            profileFragment.setArguments(args);
+
+                            // Add the fragment to the layout
+                            loadFragment(profileFragment);
+                        })
+                        .addOnFailureListener(e -> {
+                            // Hide loading indicator
+                            showProgressIndicator(false);
+
+                            Log.e(TAG, "Error fetching user profile: " + e.getMessage(), e);
+                            Toast.makeText(DoctorDashboardActivity.this,
+                                    "Failed to load profile: " + e.getMessage(),
+                                    Toast.LENGTH_SHORT).show();
+
+                            // Fall back to basic user info
+                            ProfileFragment profileFragment = new ProfileFragment();
+                            Bundle args = new Bundle();
+                            args.putSerializable("USER", currentUser);
+                            profileFragment.setArguments(args);
+
+                            // Add the fragment to the layout
+                            loadFragment(profileFragment);
+                        });
+
+                // Return false to prevent default fragment loading behavior
+                // We'll load it asynchronously after fetching the full user profile
+                return false;
             }
             // No need to create NotificationsPlaceholderFragment again as it's already created above
 
@@ -903,12 +988,78 @@ public class DoctorDashboardActivity extends AppCompatActivity implements Naviga
                                         Toast.makeText(getContext(), "Appointment confirmed", Toast.LENGTH_SHORT).show();
 
                                         // Send notification to patient
-                                        // Use the fragment's own method instead of trying to cast to PatientsPlaceholderFragment
+                                        // Use a direct approach to send notification instead of trying to cast fragments
                                         // This avoids the ClassCastException
-                                        sendNotificationToPatient(appointment.get("patientId").toString(),
-                                                "Appointment Confirmed",
-                                                "Your appointment has been confirmed by the doctor.",
-                                                appointmentId);
+
+                                        // Get patientId and create notification directly
+                                        String patientIdStr = appointment.get("patientId").toString();
+                                        String title = "Appointment Confirmed";
+                                        String message = "Your appointment has been confirmed by the doctor.";
+
+                                        // Create a notification in Firestore with proper structure
+                                        FirebaseFirestore firestore = FirebaseFirestore.getInstance();
+                                        Map<String, Object> notification = new HashMap<>();
+                                        notification.put("userId", patientIdStr);
+                                        notification.put("title", title);
+                                        notification.put("message", message);
+                                        notification.put("timestamp", com.google.firebase.Timestamp.now());
+                                        notification.put("isRead", false);
+                                        notification.put("type", "appointment");
+                                        notification.put("appointmentId", appointmentId);
+
+                                        // Additional fields to match structure of other notifications
+                                        List<String> recipientUids = new ArrayList<>();
+                                        recipientUids.add(patientIdStr);
+                                        notification.put("recipientUids", recipientUids);
+                                        notification.put("targetType", 3); // Specific users
+
+                                        // Get current doctor ID
+                                        String doctorId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+                                        notification.put("senderUid", doctorId);
+
+                                        // Get doctor name to add as sender
+                                        firestore.collection("users").document(doctorId)
+                                                .get()
+                                                .addOnSuccessListener(docSnapshot -> {
+                                                    // Add sender information
+                                                    String doctorName = "Doctor";
+
+                                                    if (docSnapshot.exists()) {
+                                                        // Get doctor name, checking both fields
+                                                        if (docSnapshot.contains("fullName")) {
+                                                            doctorName = docSnapshot.getString("fullName");
+                                                        } else if (docSnapshot.contains("name")) {
+                                                            doctorName = docSnapshot.getString("name");
+                                                        }
+
+                                                        notification.put("senderName", doctorName);
+                                                    }
+
+                                                    // Add to notifications collection
+                                                    firestore.collection("notifications")
+                                                            .add(notification)
+                                                            .addOnSuccessListener(docRef -> {
+                                                                android.util.Log.d("AppointmentsAdapter", "Notification sent successfully");
+                                                                Toast.makeText(getContext(), "Notification sent to patient", Toast.LENGTH_SHORT).show();
+                                                            })
+                                                            .addOnFailureListener(err -> {
+                                                                android.util.Log.e("AppointmentsAdapter", "Failed to send notification: " + err.getMessage(), err);
+                                                                Toast.makeText(getContext(), "Failed to send notification: " + err.getMessage(),
+                                                                        Toast.LENGTH_SHORT).show();
+                                                            });
+                                                })
+                                                .addOnFailureListener(e -> {
+                                                    // If getting doctor info fails, still send notification with minimal info
+                                                    firestore.collection("notifications")
+                                                            .add(notification)
+                                                            .addOnSuccessListener(docRef -> {
+                                                                Toast.makeText(getContext(), "Notification sent to patient", Toast.LENGTH_SHORT).show();
+                                                            })
+                                                            .addOnFailureListener(err -> {
+                                                                Toast.makeText(getContext(), "Failed to send notification: " + err.getMessage(),
+                                                                        Toast.LENGTH_SHORT).show();
+                                                            });
+                                                });
                                     })
                                     .addOnFailureListener(e -> {
                                         Toast.makeText(getContext(), "Error updating appointment: " + e.getMessage(),
@@ -938,12 +1089,78 @@ public class DoctorDashboardActivity extends AppCompatActivity implements Naviga
                                         Toast.makeText(getContext(), "Appointment cancelled", Toast.LENGTH_SHORT).show();
 
                                         // Send notification to patient
-                                        // Use the fragment's own method instead of trying to cast to PatientsPlaceholderFragment
+                                        // Use a direct approach to send notification instead of trying to cast fragments
                                         // This avoids the ClassCastException
-                                        sendNotificationToPatient(appointment.get("patientId").toString(),
-                                                "Appointment Rejected",
-                                                "Your appointment request has been rejected by the doctor.",
-                                                appointmentId);
+
+                                        // Get patientId and create notification directly
+                                        String patientIdStr = appointment.get("patientId").toString();
+                                        String title = "Appointment Rejected";
+                                        String message = "Your appointment request has been rejected by the doctor.";
+
+                                        // Create a notification in Firestore with proper structure
+                                        FirebaseFirestore firestore = FirebaseFirestore.getInstance();
+                                        Map<String, Object> notification = new HashMap<>();
+                                        notification.put("userId", patientIdStr);
+                                        notification.put("title", title);
+                                        notification.put("message", message);
+                                        notification.put("timestamp", com.google.firebase.Timestamp.now());
+                                        notification.put("isRead", false);
+                                        notification.put("type", "appointment");
+                                        notification.put("appointmentId", appointmentId);
+
+                                        // Additional fields to match structure of other notifications
+                                        List<String> recipientUids = new ArrayList<>();
+                                        recipientUids.add(patientIdStr);
+                                        notification.put("recipientUids", recipientUids);
+                                        notification.put("targetType", 3); // Specific users
+
+                                        // Get current doctor ID
+                                        String doctorId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+                                        notification.put("senderUid", doctorId);
+
+                                        // Get doctor name to add as sender
+                                        firestore.collection("users").document(doctorId)
+                                                .get()
+                                                .addOnSuccessListener(docSnapshot -> {
+                                                    // Add sender information
+                                                    String doctorName = "Doctor";
+
+                                                    if (docSnapshot.exists()) {
+                                                        // Get doctor name, checking both fields
+                                                        if (docSnapshot.contains("fullName")) {
+                                                            doctorName = docSnapshot.getString("fullName");
+                                                        } else if (docSnapshot.contains("name")) {
+                                                            doctorName = docSnapshot.getString("name");
+                                                        }
+
+                                                        notification.put("senderName", doctorName);
+                                                    }
+
+                                                    // Add to notifications collection
+                                                    firestore.collection("notifications")
+                                                            .add(notification)
+                                                            .addOnSuccessListener(docRef -> {
+                                                                android.util.Log.d("AppointmentsAdapter", "Notification sent successfully");
+                                                                Toast.makeText(getContext(), "Notification sent to patient", Toast.LENGTH_SHORT).show();
+                                                            })
+                                                            .addOnFailureListener(err -> {
+                                                                android.util.Log.e("AppointmentsAdapter", "Failed to send notification: " + err.getMessage(), err);
+                                                                Toast.makeText(getContext(), "Failed to send notification: " + err.getMessage(),
+                                                                        Toast.LENGTH_SHORT).show();
+                                                            });
+                                                })
+                                                .addOnFailureListener(e -> {
+                                                    // If getting doctor info fails, still send notification with minimal info
+                                                    firestore.collection("notifications")
+                                                            .add(notification)
+                                                            .addOnSuccessListener(docRef -> {
+                                                                Toast.makeText(getContext(), "Notification sent to patient", Toast.LENGTH_SHORT).show();
+                                                            })
+                                                            .addOnFailureListener(err -> {
+                                                                Toast.makeText(getContext(), "Failed to send notification: " + err.getMessage(),
+                                                                        Toast.LENGTH_SHORT).show();
+                                                            });
+                                                });
                                     })
                                     .addOnFailureListener(e -> {
                                         Toast.makeText(getContext(), "Error updating appointment: " + e.getMessage(),
@@ -995,12 +1212,78 @@ public class DoctorDashboardActivity extends AppCompatActivity implements Naviga
                                                     Toast.makeText(getContext(), "Appointment cancelled", Toast.LENGTH_SHORT).show();
 
                                                     // Send notification to patient
-                                                    // Use the fragment's own method instead of trying to cast to PatientsPlaceholderFragment
+                                                    // Use a direct approach to send notification instead of trying to cast fragments
                                                     // This avoids the ClassCastException
-                                                    sendNotificationToPatient(appointment.get("patientId").toString(),
-                                                            "Appointment Cancelled by Doctor",
-                                                            "Your appointment has been cancelled by the doctor.",
-                                                            appointmentId);
+
+                                                    // Get patientId and create notification directly
+                                                    String patientIdStr = appointment.get("patientId").toString();
+                                                    String title = "Appointment Cancelled by Doctor";
+                                                    String message = "Your appointment has been cancelled by the doctor.";
+
+                                                    // Create a notification in Firestore with proper structure
+                                                    FirebaseFirestore firestore = FirebaseFirestore.getInstance();
+                                                    Map<String, Object> notification = new HashMap<>();
+                                                    notification.put("userId", patientIdStr);
+                                                    notification.put("title", title);
+                                                    notification.put("message", message);
+                                                    notification.put("timestamp", com.google.firebase.Timestamp.now());
+                                                    notification.put("isRead", false);
+                                                    notification.put("type", "appointment");
+                                                    notification.put("appointmentId", appointmentId);
+
+                                                    // Additional fields to match structure of other notifications
+                                                    List<String> recipientUids = new ArrayList<>();
+                                                    recipientUids.add(patientIdStr);
+                                                    notification.put("recipientUids", recipientUids);
+                                                    notification.put("targetType", 3); // Specific users
+
+                                                    // Get current doctor ID
+                                                    String doctorId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+                                                    notification.put("senderUid", doctorId);
+
+                                                    // Get doctor name to add as sender
+                                                    firestore.collection("users").document(doctorId)
+                                                            .get()
+                                                            .addOnSuccessListener(docSnapshot -> {
+                                                                // Add sender information
+                                                                String doctorName = "Doctor";
+
+                                                                if (docSnapshot.exists()) {
+                                                                    // Get doctor name, checking both fields
+                                                                    if (docSnapshot.contains("fullName")) {
+                                                                        doctorName = docSnapshot.getString("fullName");
+                                                                    } else if (docSnapshot.contains("name")) {
+                                                                        doctorName = docSnapshot.getString("name");
+                                                                    }
+
+                                                                    notification.put("senderName", doctorName);
+                                                                }
+
+                                                                // Add to notifications collection
+                                                                firestore.collection("notifications")
+                                                                        .add(notification)
+                                                                        .addOnSuccessListener(docRef -> {
+                                                                            android.util.Log.d("AppointmentsAdapter", "Notification sent successfully");
+                                                                            Toast.makeText(getContext(), "Notification sent to patient", Toast.LENGTH_SHORT).show();
+                                                                        })
+                                                                        .addOnFailureListener(err -> {
+                                                                            android.util.Log.e("AppointmentsAdapter", "Failed to send notification: " + err.getMessage(), err);
+                                                                            Toast.makeText(getContext(), "Failed to send notification: " + err.getMessage(),
+                                                                                    Toast.LENGTH_SHORT).show();
+                                                                        });
+                                                            })
+                                                            .addOnFailureListener(e -> {
+                                                                // If getting doctor info fails, still send notification with minimal info
+                                                                firestore.collection("notifications")
+                                                                        .add(notification)
+                                                                        .addOnSuccessListener(docRef -> {
+                                                                            Toast.makeText(getContext(), "Notification sent to patient", Toast.LENGTH_SHORT).show();
+                                                                        })
+                                                                        .addOnFailureListener(err -> {
+                                                                            Toast.makeText(getContext(), "Failed to send notification: " + err.getMessage(),
+                                                                                    Toast.LENGTH_SHORT).show();
+                                                                        });
+                                                            });
                                                 })
                                                 .addOnFailureListener(e -> {
                                                     Toast.makeText(getContext(), "Error cancelling appointment: " + e.getMessage(),
@@ -1203,7 +1486,8 @@ public class DoctorDashboardActivity extends AppCompatActivity implements Naviga
                             // Process patients
                             for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
                                 try {
-                                    User patient = document.toObject(User.class);
+                                    // Don't use toObject to avoid @DocumentId issues
+                                    User patient = createUserFromDocument(document);
                                     patientsList.add(patient);
                                 } catch (Exception e) {
                                     e.printStackTrace();
@@ -1604,7 +1888,8 @@ public class DoctorDashboardActivity extends AppCompatActivity implements Naviga
                                 .addOnSuccessListener(doctorDoc -> {
                                     if (doctorDoc.exists()) {
                                         // Create a User object for the doctor
-                                        User doctorUser = doctorDoc.toObject(User.class);
+                                        // Don't use toObject to avoid @DocumentId issues
+                                        User doctorUser = createUserFromDocument(doctorDoc);
                                         if (doctorUser != null) {
                                             // Set arguments for the fragment
                                             args.putSerializable("USER", doctorUser);
@@ -2072,4 +2357,87 @@ public class DoctorDashboardActivity extends AppCompatActivity implements Naviga
             }
         }
     }
+
+    /**
+     * Create a User object manually from a DocumentSnapshot to avoid @DocumentId issues
+     */
+    private static User createUserFromDocument(DocumentSnapshot documentSnapshot) {
+        try {
+            Map<String, Object> userData = documentSnapshot.getData();
+            if (userData == null) {
+                Log.e(TAG, "createUserFromDocument: userData is null");
+                return null;
+            }
+
+            User user = new User();
+            user.setUid(documentSnapshot.getId()); // Set the document ID
+
+            // Manually map fields from document to User object
+            if (userData.containsKey("email")) {
+                user.setEmail((String) userData.get("email"));
+            }
+            if (userData.containsKey("fullName")) {
+                user.setFullName((String) userData.get("fullName"));
+            }
+            if (userData.containsKey("role")) {
+                Object roleObj = userData.get("role");
+                if (roleObj instanceof Long) {
+                    user.setRole(((Long) roleObj).intValue());
+                } else if (roleObj instanceof Integer) {
+                    user.setRole((Integer) roleObj);
+                }
+            }
+            if (userData.containsKey("status")) {
+                Object statusObj = userData.get("status");
+                if (statusObj instanceof Long) {
+                    user.setStatus(((Long) statusObj).intValue());
+                } else if (statusObj instanceof Integer) {
+                    user.setStatus((Integer) statusObj);
+                }
+            }
+
+            // Add other fields as needed
+            if (userData.containsKey("photoUrl")) {
+                user.setPhotoUrl((String) userData.get("photoUrl"));
+            }
+            if (userData.containsKey("phone")) {
+                // Decrypt phone number from database
+                String encryptedPhone = (String) userData.get("phone");
+                String decryptedPhone = com.example.patienttracker.utils.EncryptionUtil.decryptData(encryptedPhone);
+                user.setPhone(decryptedPhone);
+            }
+            if (userData.containsKey("specialization")) {
+                user.setSpecialization((String) userData.get("specialization"));
+            }
+            if (userData.containsKey("department")) {
+                user.setDepartment((String) userData.get("department"));
+            }
+            if (userData.containsKey("yearsOfExperience")) {
+                Object expObj = userData.get("yearsOfExperience");
+                if (expObj instanceof Long) {
+                    user.setYearsOfExperience(((Long) expObj).intValue());
+                } else if (expObj instanceof Integer) {
+                    user.setYearsOfExperience((Integer) expObj);
+                }
+            }
+
+            return user;
+        } catch (Exception e) {
+            Log.e(TAG, "Error creating user from document: " + e.getMessage(), e);
+            return null;
+        }
+    }
+
+    /**
+     * Show or hide the progress indicator overlay
+     *
+     * @param show True to show the progress indicator, false to hide it
+     */
+    private void showProgressIndicator(boolean show) {
+        if (progressOverlay != null) {
+            progressOverlay.setVisibility(show ? View.VISIBLE : View.GONE);
+        }
+    }
+
+    // We've already defined the createUserFromDocument method earlier in this class, so this duplicate is removed
 }

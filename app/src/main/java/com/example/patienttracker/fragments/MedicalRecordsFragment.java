@@ -161,8 +161,32 @@ public class MedicalRecordsFragment extends Fragment implements MedicalRecordAda
         medicalRecordsListener = query.addSnapshotListener((snapshots, error) -> {
             if (error != null) {
                 Log.e(TAG, "Error loading medical records: " + error.getMessage());
-                Toast.makeText(getContext(), "Error loading medical records: " + error.getMessage(),
-                        Toast.LENGTH_SHORT).show();
+
+                // Provide a more user-friendly error message
+                String errorMessage;
+                if (error.getMessage() != null && error.getMessage().contains("PERMISSION_DENIED")) {
+                    errorMessage = "You don't have permission to access these medical records.";
+
+                    // For debugging - check user roles
+                    if (currentUser != null) {
+                        Log.d(TAG, "Current user role: " + currentUser.getRoleString() +
+                                ", isPatient: " + currentUser.isPatient() +
+                                ", isDoctor: " + currentUser.isDoctor() +
+                                ", isAdmin: " + currentUser.isAdmin());
+                    }
+
+                    // Display empty state instead of error for better UX
+                    if (getContext() != null) {
+                        showEmptyState();
+                        emptyRecordsText.setText("No medical records available");
+                    }
+                } else {
+                    errorMessage = "Error loading medical records: " + error.getMessage();
+                }
+
+                if (getContext() != null) {
+                    Toast.makeText(getContext(), errorMessage, Toast.LENGTH_SHORT).show();
+                }
                 return;
             }
 
@@ -300,7 +324,16 @@ public class MedicalRecordsFragment extends Fragment implements MedicalRecordAda
                     })
                     .addOnFailureListener(e -> {
                         progressDialog.dismiss();
-                        Toast.makeText(getContext(), "Error adding record: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+
+                        String errorMessage;
+                        if (e.getMessage() != null && e.getMessage().contains("PERMISSION_DENIED")) {
+                            errorMessage = "You don't have permission to add medical records.";
+                            Log.e(TAG, "Permission denied error: " + e.getMessage());
+                        } else {
+                            errorMessage = "Error adding record: " + e.getMessage();
+                        }
+
+                        Toast.makeText(getContext(), errorMessage, Toast.LENGTH_SHORT).show();
                     });
         });
     }
@@ -325,9 +358,11 @@ public class MedicalRecordsFragment extends Fragment implements MedicalRecordAda
                 .add(notification)
                 .addOnSuccessListener(documentReference -> {
                     // Notification saved
+                    Log.d(TAG, "Notification saved with ID: " + documentReference.getId());
                 })
                 .addOnFailureListener(e -> {
                     // Error
+                    Log.e(TAG, "Error adding notification: " + e.getMessage());
                 });
     }
 
@@ -367,62 +402,9 @@ public class MedicalRecordsFragment extends Fragment implements MedicalRecordAda
             notesText.setText("No additional notes");
         }
 
-        // Set up PDF download button
-        downloadButton.setOnClickListener(v -> {
-            // Show loading indicator
-            ProgressDialog progressDialog = new ProgressDialog(getContext());
-            progressDialog.setMessage("Generating PDF...");
-            progressDialog.setCancelable(false);
-            progressDialog.show();
+        // TODO: Implement PDF download and sharing functionality
 
-            // Generate PDF in a background thread
-            new Thread(() -> {
-                File pdfFile = PdfGenerator.generateMedicalRecordPdf(getContext(), record);
-
-                // Update UI on the main thread
-                if (getActivity() != null) {
-                    getActivity().runOnUiThread(() -> {
-                        progressDialog.dismiss();
-                        if (pdfFile != null) {
-                            // Open the PDF
-                            PdfGenerator.openPdfFile(getContext(), pdfFile);
-                        } else {
-                            Toast.makeText(getContext(), "Failed to generate PDF", Toast.LENGTH_SHORT).show();
-                        }
-                    });
-                }
-            }).start();
-        });
-
-        // Set up share button
-        shareButton.setOnClickListener(v -> {
-            // Show loading indicator
-            ProgressDialog progressDialog = new ProgressDialog(getContext());
-            progressDialog.setMessage("Preparing to share...");
-            progressDialog.setCancelable(false);
-            progressDialog.show();
-
-            // Generate PDF for sharing in a background thread
-            new Thread(() -> {
-                File pdfFile = PdfGenerator.generateMedicalRecordPdf(getContext(), record);
-
-                // Update UI on the main thread
-                if (getActivity() != null) {
-                    getActivity().runOnUiThread(() -> {
-                        progressDialog.dismiss();
-                        if (pdfFile != null) {
-                            // Share the PDF
-                            PdfGenerator.sharePdfFile(getContext(), pdfFile,
-                                    "Medical Record (" + formattedDate + ")");
-                        } else {
-                            Toast.makeText(getContext(), "Failed to generate PDF for sharing", Toast.LENGTH_SHORT).show();
-                        }
-                    });
-                }
-            }).start();
-        });
-
-        // Add close button
+        // Set up the buttons
         builder.setPositiveButton("Close", null);
 
         // Create and show the dialog
@@ -430,54 +412,43 @@ public class MedicalRecordsFragment extends Fragment implements MedicalRecordAda
         dialog.show();
     }
 
-    /**
-     * Implementation of OnRecordClickListener.onViewDetailsClick
-     * Called when a user clicks the "View Details" button in a medical record item
-     */
     @Override
     public void onViewDetailsClick(MedicalRecord record) {
-        if (record != null) {
-            showRecordDetailsDialog(record);
-        }
+        // Show record details when a record is clicked
+        showRecordDetailsDialog(record);
     }
 
-    /**
-     * Implementation of OnRecordClickListener.onDownloadPdfClick
-     * Called when a user clicks the "Download PDF" button in a medical record item
-     */
     @Override
     public void onDownloadPdfClick(MedicalRecord record) {
-        if (record != null && getContext() != null) {
-            // Show loading indicator
-            ProgressDialog progressDialog = new ProgressDialog(getContext());
-            progressDialog.setMessage("Generating PDF...");
-            progressDialog.setCancelable(false);
-            progressDialog.show();
+        // Show loading indicator
+        ProgressDialog progressDialog = new ProgressDialog(getContext());
+        progressDialog.setMessage("Generating PDF...");
+        progressDialog.setCancelable(false);
+        progressDialog.show();
 
-            // Generate PDF in a background thread
-            new Thread(() -> {
-                File pdfFile = PdfGenerator.generateMedicalRecordPdf(getContext(), record);
+        // Generate PDF in a background thread
+        new Thread(() -> {
+            File pdfFile = PdfGenerator.generateMedicalRecordPdf(getContext(), record);
 
-                // Update UI on the main thread
-                if (getActivity() != null) {
-                    getActivity().runOnUiThread(() -> {
-                        progressDialog.dismiss();
-                        if (pdfFile != null) {
-                            // Open the PDF
-                            PdfGenerator.openPdfFile(getContext(), pdfFile);
-                        } else {
-                            Toast.makeText(getContext(), "Failed to generate PDF", Toast.LENGTH_SHORT).show();
-                        }
-                    });
-                }
-            }).start();
-        }
+            // Update UI on the main thread
+            if (getActivity() != null) {
+                getActivity().runOnUiThread(() -> {
+                    progressDialog.dismiss();
+                    if (pdfFile != null) {
+                        Toast.makeText(getContext(), "PDF generated: " + pdfFile.getName(), Toast.LENGTH_SHORT).show();
+                        // TODO: Implement PDF viewing or sharing functionality
+                    } else {
+                        Toast.makeText(getContext(), "Failed to generate PDF", Toast.LENGTH_SHORT).show();
+                    }
+                });
+            }
+        }).start();
     }
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        // Remove Firestore listener
+        // Remove Firestore listener to prevent memory leaks
         if (medicalRecordsListener != null) {
             medicalRecordsListener.remove();
         }

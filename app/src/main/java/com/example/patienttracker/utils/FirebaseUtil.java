@@ -323,12 +323,104 @@ public class FirebaseUtil {
                 Log.e(TAG, "saveUser: user or user.uid is null");
                 throw new IllegalArgumentException("User or user ID cannot be null");
             }
+
+            // Create a copy of the user with encrypted sensitive data
+            Map<String, Object> userData = new HashMap<>();
+            userData.put("uid", user.getUid());
+            userData.put("email", user.getEmail());
+            userData.put("fullName", user.getFullName());
+            userData.put("role", user.getRole());
+            userData.put("status", user.getStatus());
+
+            // Encrypt phone number before saving to database
+            if (user.getPhone() != null) {
+                String encryptedPhone = com.example.patienttracker.utils.EncryptionUtil.encryptData(user.getPhone());
+                userData.put("phone", encryptedPhone);
+            }
+
+            // Add other user fields
+            if (user.getAddress() != null) userData.put("address", user.getAddress());
+            if (user.getPhotoUrl() != null) userData.put("photoUrl", user.getPhotoUrl());
+            if (user.getGender() != null) userData.put("gender", user.getGender());
+            if (user.getDateOfBirth() != null) userData.put("dateOfBirth", user.getDateOfBirth());
+            if (user.getFathersName() != null) userData.put("fathersName", user.getFathersName());
+            if (user.getBloodType() != null) userData.put("bloodType", user.getBloodType());
+            if (user.getWeight() > 0) userData.put("weight", user.getWeight());
+            if (user.getHeight() > 0) userData.put("height", user.getHeight());
+
+            // Add doctor-specific fields if present
+            if (user.getSpecialization() != null) userData.put("specialization", user.getSpecialization());
+            if (user.getDepartment() != null) userData.put("department", user.getDepartment());
+            if (user.getYearsOfExperience() > 0) userData.put("yearsOfExperience", user.getYearsOfExperience());
+
             return getFirestore().collection(USERS_COLLECTION)
                     .document(user.getUid())
-                    .set(user);
+                    .set(userData);
         } catch (Exception e) {
             Log.e(TAG, "Error saving user: " + e.getMessage(), e);
             // Return a failed task using Tasks utility class
+            return Tasks.forException(e);
+        }
+    }
+
+    /**
+     * Save user data to both Firestore and Realtime Database
+     * This ensures data consistency across both databases
+     * @param user The user object to save
+     * @return A task that completes when both operations are done
+     */
+    public static Task<Void> saveUserToAllDatabases(User user) {
+        try {
+            if (user == null || user.getUid() == null) {
+                Log.e(TAG, "saveUserToAllDatabases: user or user.uid is null");
+                throw new IllegalArgumentException("User or user ID cannot be null");
+            }
+
+            // Save to Firestore first using our saveUser method which handles encryption
+            Task<Void> firestoreTask = saveUser(user);
+
+            // Save to Realtime Database as well
+            DatabaseReference userRef = getDatabaseReference().child("users").child(user.getUid());
+            Map<String, Object> updates = new HashMap<>();
+
+            // Add all User fields to the updates map
+            updates.put("uid", user.getUid());
+            updates.put("email", user.getEmail());
+            updates.put("fullName", user.getFullName());
+            updates.put("name", user.getFullName()); // For backward compatibility
+            updates.put("role", user.getRole());
+            updates.put("status", user.getStatus());
+
+            // Add profile-specific fields
+            // Encrypt phone number before saving to database
+            if (user.getPhone() != null) {
+                String encryptedPhone = com.example.patienttracker.utils.EncryptionUtil.encryptData(user.getPhone());
+                updates.put("phone", encryptedPhone);
+            }
+            if (user.getAddress() != null) updates.put("address", user.getAddress());
+            if (user.getGender() != null) updates.put("gender", user.getGender());
+            if (user.getDateOfBirth() != null) updates.put("dateOfBirth", user.getDateOfBirth());
+            if (user.getFathersName() != null) updates.put("fathersName", user.getFathersName());
+            if (user.getBloodType() != null) updates.put("bloodType", user.getBloodType());
+            if (user.getWeight() > 0) updates.put("weight", user.getWeight());
+            if (user.getHeight() > 0) updates.put("height", user.getHeight());
+            if (user.getAge() > 0) updates.put("age", user.getAge());
+
+            // Handle profile image URLs (use both field names for compatibility)
+            if (user.getPhotoUrl() != null) {
+                updates.put("photoUrl", user.getPhotoUrl());
+                updates.put("profileImageUrl", user.getPhotoUrl());
+            }
+
+            // Perform the update
+            Task<Void> realtimeDbTask = userRef.updateChildren(updates);
+
+            // Return a task that completes when both operations complete
+            return Tasks.whenAll(firestoreTask, realtimeDbTask);
+
+        } catch (Exception e) {
+            Log.e(TAG, "Error in saveUserToAllDatabases: " + e.getMessage(), e);
+            // Return a failed task
             return Tasks.forException(e);
         }
     }

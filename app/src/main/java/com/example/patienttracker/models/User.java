@@ -22,7 +22,7 @@ public class User implements Serializable {
     // Add serialVersionUID for serialization
     private static final long serialVersionUID = 1L;
 
-    @DocumentId
+    // Remove @DocumentId annotation since 'uid' already exists in the document
     private String uid;
     private String email;
     private String fullName;
@@ -37,6 +37,13 @@ public class User implements Serializable {
     private String department; // For doctors
     private int yearsOfExperience; // For doctors
     private Map<String, Object> medicalHistory; // For patients
+
+    // Additional profile fields
+    private String fathersName;
+    private String bloodType;
+    private float weight; // in kg
+    private float height; // in cm
+    private int age; // Calculated from date of birth or stored directly
 
     // Mark Timestamp fields as transient to exclude them from serialization
     @ServerTimestamp
@@ -226,6 +233,125 @@ public class User implements Serializable {
         this.lastUpdatedString = lastUpdatedString;
     }
 
+    // Getters and setters for new profile fields
+    public String getFathersName() {
+        return fathersName;
+    }
+
+    public void setFathersName(String fathersName) {
+        this.fathersName = fathersName;
+    }
+
+    public String getBloodType() {
+        return bloodType;
+    }
+
+    public void setBloodType(String bloodType) {
+        this.bloodType = bloodType;
+    }
+
+    public float getWeight() {
+        return weight;
+    }
+
+    // Single setter that handles both Float and Double
+    public void setWeight(Object weight) {
+        if (weight == null) {
+            return;
+        }
+
+        if (weight instanceof Float) {
+            this.weight = (Float) weight;
+        } else if (weight instanceof Double) {
+            this.weight = ((Double) weight).floatValue();
+        } else if (weight instanceof Integer) {
+            this.weight = ((Integer) weight).floatValue();
+        } else if (weight instanceof Long) {
+            this.weight = ((Long) weight).floatValue();
+        } else if (weight instanceof String) {
+            try {
+                this.weight = Float.parseFloat((String) weight);
+            } catch (NumberFormatException e) {
+                // Ignore invalid string
+            }
+        }
+    }
+
+    public float getHeight() {
+        return height;
+    }
+
+    // Single setter that handles both Float and Double
+    public void setHeight(Object height) {
+        if (height == null) {
+            return;
+        }
+
+        if (height instanceof Float) {
+            this.height = (Float) height;
+        } else if (height instanceof Double) {
+            this.height = ((Double) height).floatValue();
+        } else if (height instanceof Integer) {
+            this.height = ((Integer) height).floatValue();
+        } else if (height instanceof Long) {
+            this.height = ((Long) height).floatValue();
+        } else if (height instanceof String) {
+            try {
+                this.height = Float.parseFloat((String) height);
+            } catch (NumberFormatException e) {
+                // Ignore invalid string
+            }
+        }
+    }
+
+    public int getAge() {
+        return age;
+    }
+
+    public void setAge(int age) {
+        this.age = age;
+    }
+
+    // Helper method to calculate age from date of birth
+    public int calculateAge() {
+        if (dateOfBirth == null || dateOfBirth.isEmpty()) {
+            return 0;
+        }
+
+        try {
+            // Parse date of birth in format MM/dd/yyyy
+            String[] parts = dateOfBirth.split("/");
+            if (parts.length != 3) return 0;
+
+            int month = Integer.parseInt(parts[0]);
+            int day = Integer.parseInt(parts[1]);
+            int year = Integer.parseInt(parts[2]);
+
+            // Validate date components
+            if (month < 1 || month > 12 || day < 1 || day > 31 || year < 1900) {
+                return 0;
+            }
+
+            // Get current date
+            java.util.Calendar now = java.util.Calendar.getInstance();
+            int currentYear = now.get(java.util.Calendar.YEAR);
+            int currentMonth = now.get(java.util.Calendar.MONTH) + 1; // Calendar months are 0-based
+            int currentDay = now.get(java.util.Calendar.DAY_OF_MONTH);
+
+            // Calculate age
+            int age = currentYear - year;
+
+            // Adjust age if birthday hasn't occurred yet this year
+            if (month > currentMonth || (month == currentMonth && day > currentDay)) {
+                age--;
+            }
+
+            return age;
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
     // Custom serialization to handle Timestamp fields
     private void writeObject(java.io.ObjectOutputStream out) throws java.io.IOException {
         // Convert timestamps to strings before serialization
@@ -276,6 +402,28 @@ public class User implements Serializable {
     public boolean isApproved() {
         return status == STATUS_ACTIVE;
     }
+
+    @Override
+    public String toString() {
+        return "User{" +
+                "uid='" + uid + '\'' +
+                ", email='" + email + '\'' +
+                ", fullName='" + fullName + '\'' +
+                ", phone='" + phone + '\'' +
+                ", address='" + address + '\'' +
+                ", dateOfBirth='" + dateOfBirth + '\'' +
+                ", gender='" + gender + '\'' +
+                ", photoUrl='" + photoUrl + '\'' +
+                ", role=" + role +
+                ", status=" + status +
+                ", fathersName='" + fathersName + '\'' +
+                ", bloodType='" + bloodType + '\'' +
+                ", weight=" + weight +
+                ", height=" + height +
+                ", age=" + age +
+                '}';
+    }
+
 
     public String getRoleString() {
         switch (role) {

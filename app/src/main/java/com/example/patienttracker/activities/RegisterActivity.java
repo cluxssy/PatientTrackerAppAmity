@@ -125,7 +125,7 @@ public class RegisterActivity extends AppCompatActivity {
                         // Registration successful, create user in Firestore
                         FirebaseUser firebaseUser = auth.getCurrentUser();
                         if (firebaseUser != null) {
-                            createUserInFirestore(firebaseUser.getUid(), name, email, roleConstant);
+                            createUserInFirestore(firebaseUser.getUid(), email, name, roleConstant);
                         }
                     } else {
                         // Registration failed, show error message
@@ -158,9 +158,9 @@ public class RegisterActivity extends AppCompatActivity {
     /**
      * Create a user document in Firestore
      */
-    private void createUserInFirestore(String uid, String name, String email, int role) {
+    private void createUserInFirestore(String uid, String email, String fullName, int role) {
         // Create User object
-        User user = new User(uid, name, email, role);
+        User user = new User(uid, email, fullName, role);
 
         // Save user to Firestore
         FirebaseUtil.saveUser(user)

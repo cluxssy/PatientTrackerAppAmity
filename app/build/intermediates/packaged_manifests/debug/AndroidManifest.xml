@@ -28,7 +28,6 @@
         android:requestLegacyExternalStorage="true"
         android:roundIcon="@drawable/app_logo"
         android:supportsRtl="true"
-        android:testOnly="true"
         android:theme="@style/Theme.PatientTracker" >
 
         <!-- Main Activity (Splash/Launcher) -->

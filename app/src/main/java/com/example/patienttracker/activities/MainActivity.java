@@ -16,6 +16,8 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 
+import java.util.Map;
+
 /**
  * The main entry point for the application.
  * This activity checks if the user is logged in and redirects to the appropriate dashboard
@@ -148,7 +150,8 @@ public class MainActivity extends AppCompatActivity {
                             Log.d(TAG, "checkUserRoleAndRedirect: Document retrieved successfully");
 
                             if (documentSnapshot.exists()) {
-                                User user = documentSnapshot.toObject(User.class);
+                                // Don't use toObject to avoid @DocumentId issues
+                                User user = createUserFromDocument(documentSnapshot);
                                 if (user != null) {
                                     Log.d(TAG, "checkUserRoleAndRedirect: User role = " + user.getRole() +
                                             ", status = " + user.getStatus());
@@ -174,6 +177,73 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception e) {
             Log.e(TAG, "Error in checkUserRoleAndRedirect: " + e.getMessage(), e);
             showErrorAndNavigateToLogin("Failed to verify your account: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Create a User object manually from a DocumentSnapshot to avoid @DocumentId issues
+     */
+    private User createUserFromDocument(DocumentSnapshot documentSnapshot) {
+        try {
+            Map<String, Object> userData = documentSnapshot.getData();
+            if (userData == null) {
+                Log.e(TAG, "createUserFromDocument: userData is null");
+                return null;
+            }
+
+            User user = new User();
+            user.setUid(documentSnapshot.getId()); // Set the document ID
+
+            // Manually map fields from document to User object
+            if (userData.containsKey("email")) {
+                user.setEmail((String) userData.get("email"));
+            }
+            if (userData.containsKey("fullName")) {
+                user.setFullName((String) userData.get("fullName"));
+            }
+            if (userData.containsKey("role")) {
+                Object roleObj = userData.get("role");
+                if (roleObj instanceof Long) {
+                    user.setRole(((Long) roleObj).intValue());
+                } else if (roleObj instanceof Integer) {
+                    user.setRole((Integer) roleObj);
+                }
+            }
+            if (userData.containsKey("status")) {
+                Object statusObj = userData.get("status");
+                if (statusObj instanceof Long) {
+                    user.setStatus(((Long) statusObj).intValue());
+                } else if (statusObj instanceof Integer) {
+                    user.setStatus((Integer) statusObj);
+                }
+            }
+
+            // Add other fields as needed
+            if (userData.containsKey("photoUrl")) {
+                user.setPhotoUrl((String) userData.get("photoUrl"));
+            }
+            if (userData.containsKey("phone")) {
+                user.setPhone((String) userData.get("phone"));
+            }
+            if (userData.containsKey("specialization")) {
+                user.setSpecialization((String) userData.get("specialization"));
+            }
+            if (userData.containsKey("department")) {
+                user.setDepartment((String) userData.get("department"));
+            }
+            if (userData.containsKey("yearsOfExperience")) {
+                Object expObj = userData.get("yearsOfExperience");
+                if (expObj instanceof Long) {
+                    user.setYearsOfExperience(((Long) expObj).intValue());
+                } else if (expObj instanceof Integer) {
+                    user.setYearsOfExperience((Integer) expObj);
+                }
+            }
+
+            return user;
+        } catch (Exception e) {
+            Log.e(TAG, "Error creating user from document: " + e.getMessage(), e);
+            return null;
         }
     }
 

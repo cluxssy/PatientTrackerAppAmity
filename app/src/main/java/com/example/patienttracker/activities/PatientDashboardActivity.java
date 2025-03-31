@@ -20,6 +20,7 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.DatePicker;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.Space;
@@ -70,11 +71,14 @@ import com.google.firebase.firestore.Query;
  */
 public class PatientDashboardActivity extends AppCompatActivity implements NavigationBarView.OnItemSelectedListener {
 
+    private static final String TAG = "PatientDashboardActivity";
+
     private BottomNavigationView bottomNavigationView;
     private User currentUser;
     private FirebaseFirestore db;
     private ListenerRegistration appointmentsListener; // Store the listener to detach it later
     private ConstraintLayout mainLayout; // Using ConstraintLayout instead of FrameLayout
+    private FrameLayout progressOverlay; // Progress indicator overlay
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -89,10 +93,30 @@ public class PatientDashboardActivity extends AppCompatActivity implements Navig
             int userRole = getIntent().getIntExtra("USER_ROLE", -1);
             int userStatus = getIntent().getIntExtra("USER_STATUS", -1);
 
-            // Create user object from intent data
+            // Create initial user object from intent data
             if (userId != null && userEmail != null && userName != null && userRole == User.ROLE_PATIENT) {
                 currentUser = new User(userId, userEmail, userName, userRole);
                 currentUser.setStatus(userStatus);
+
+                // Fetch full user data from Firestore for comprehensive profile information
+                FirebaseFirestore.getInstance().collection("users").document(userId)
+                        .get()
+                        .addOnSuccessListener(documentSnapshot -> {
+                            if (documentSnapshot.exists()) {
+                                Log.d(TAG, "Successfully fetched full user data from Firestore");
+                                // Replace basic user with complete user data
+                                User completeUser = createUserFromDocument(documentSnapshot);
+                                if (completeUser != null) {
+                                    currentUser = completeUser;
+                                    Log.d(TAG, "Updated user with complete profile data: " + currentUser.toString());
+                                }
+                            } else {
+                                Log.w(TAG, "User document doesn't exist for ID: " + userId);
+                            }
+                        })
+                        .addOnFailureListener(e -> {
+                            Log.e(TAG, "Error fetching full user data: " + e.getMessage(), e);
+                        });
             } else {
                 // If user data is invalid or not a patient, go back to login
                 FirebaseUtil.signOut();
@@ -107,13 +131,16 @@ public class PatientDashboardActivity extends AppCompatActivity implements Navig
             // Find the main container - Using ConstraintLayout, not FrameLayout
             mainLayout = findViewById(R.id.frame_container);
 
+            // Initialize progress overlay
+            progressOverlay = findViewById(R.id.progress_overlay);
+
             // Set title in action bar
             if (getSupportActionBar() != null) {
                 getSupportActionBar().setTitle(getString(R.string.app_name) + " - " + getString(R.string.role_patient));
             }
 
-            // Display welcome text
-            displayWelcomeView();
+            // Set default selection to profile (now the first tab)
+            bottomNavigationView.setSelectedItemId(R.id.nav_profile);
 
             // Update notification badge
             updateNotificationBadge();
@@ -305,7 +332,8 @@ public class PatientDashboardActivity extends AppCompatActivity implements Navig
                             // Get appointments
                             List<Appointment> appointmentsList = new ArrayList<>();
                             for (DocumentSnapshot document : queryDocumentSnapshots.getDocuments()) {
-                                Appointment appointment = document.toObject(Appointment.class);
+                                // Don't use toObject to avoid potential @DocumentId issues
+                                Appointment appointment = createAppointmentFromDocument(document);
                                 if (appointment != null) {
                                     // Normalize the data format to handle legacy fields
                                     appointment.normalizeDateTime();
@@ -651,7 +679,8 @@ public class PatientDashboardActivity extends AppCompatActivity implements Navig
                     db.collection("appointments").document(appointmentId)
                             .get()
                             .addOnSuccessListener(documentSnapshot -> {
-                                Appointment appointment = documentSnapshot.toObject(Appointment.class);
+                                // Don't use toObject to avoid potential @DocumentId issues
+                                Appointment appointment = createAppointmentFromDocument(documentSnapshot);
                                 if (appointment != null && appointment.getDoctorId() != null) {
                                     // Normalize date/time format
                                     appointment.normalizeDateTime();
@@ -814,7 +843,8 @@ public class PatientDashboardActivity extends AppCompatActivity implements Navig
                     doctors.clear();
 
                     for (DocumentSnapshot document : queryDocumentSnapshots.getDocuments()) {
-                        User doctor = document.toObject(User.class);
+                        // Don't use toObject to avoid @DocumentId issues
+                        User doctor = createUserFromDocument(document);
                         if (doctor != null) {
                             doctors.add(doctor);
                         }
@@ -1138,18 +1168,66 @@ public class PatientDashboardActivity extends AppCompatActivity implements Navig
         // Clear previous views
         mainLayout.removeAllViews();
 
-        // Create new ProfileFragment instance
-        ProfileFragment profileFragment = new ProfileFragment();
+        // Show loading indicator
+        showProgressIndicator(true);
 
-        // Pass current user to the fragment
-        Bundle args = new Bundle();
-        args.putSerializable("USER", currentUser);
-        profileFragment.setArguments(args);
+        // Fetch the complete user profile from Firestore before creating the fragment
+        FirebaseFirestore.getInstance().collection("users")
+                .document(currentUser.getId())
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    // Hide loading indicator
+                    showProgressIndicator(false);
 
-        // Add the fragment to the layout
-        getSupportFragmentManager().beginTransaction()
-                .replace(R.id.frame_container, profileFragment)
-                .commit();
+                    User fullUserProfile;
+                    if (documentSnapshot.exists()) {
+                        // Create a complete user object from the Firestore document
+                        fullUserProfile = createUserFromDocument(documentSnapshot);
+
+                        if (fullUserProfile == null) {
+                            // If document exists but mapping failed, use the current basic user object
+                            fullUserProfile = currentUser;
+                            Log.w(TAG, "Could not create user from document, using basic user info");
+                        }
+                    } else {
+                        // If user document doesn't exist, use the current basic user object
+                        fullUserProfile = currentUser;
+                        Log.w(TAG, "User document not found in Firestore, using basic user info");
+                    }
+
+                    // Create new ProfileFragment instance
+                    ProfileFragment profileFragment = new ProfileFragment();
+
+                    // Pass the complete user to the fragment
+                    Bundle args = new Bundle();
+                    args.putSerializable("USER", fullUserProfile);
+                    profileFragment.setArguments(args);
+
+                    // Add the fragment to the layout
+                    getSupportFragmentManager().beginTransaction()
+                            .replace(R.id.frame_container, profileFragment)
+                            .commit();
+                })
+                .addOnFailureListener(e -> {
+                    // Hide loading indicator
+                    showProgressIndicator(false);
+
+                    Log.e(TAG, "Error fetching user profile: " + e.getMessage(), e);
+                    Toast.makeText(PatientDashboardActivity.this,
+                            "Failed to load profile: " + e.getMessage(),
+                            Toast.LENGTH_SHORT).show();
+
+                    // Create the fragment with the basic user info we have
+                    ProfileFragment profileFragment = new ProfileFragment();
+                    Bundle args = new Bundle();
+                    args.putSerializable("USER", currentUser);
+                    profileFragment.setArguments(args);
+
+                    // Add the fragment to the layout
+                    getSupportFragmentManager().beginTransaction()
+                            .replace(R.id.frame_container, profileFragment)
+                            .commit();
+                });
     }
 
     private void displayNotificationsView() {
@@ -1536,6 +1614,17 @@ public class PatientDashboardActivity extends AppCompatActivity implements Navig
         finish();
     }
 
+    /**
+     * Show or hide the progress indicator overlay
+     *
+     * @param show True to show the progress indicator, false to hide it
+     */
+    private void showProgressIndicator(boolean show) {
+        if (progressOverlay != null) {
+            progressOverlay.setVisibility(show ? View.VISIBLE : View.GONE);
+        }
+    }
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
@@ -1554,11 +1643,249 @@ public class PatientDashboardActivity extends AppCompatActivity implements Navig
     @Override
     public void onBackPressed() {
         // If we're not on the appointments tab, go to appointments
+        // (maintaining original functionality even with reordered tabs)
         if (bottomNavigationView.getSelectedItemId() != R.id.nav_appointments) {
             bottomNavigationView.setSelectedItemId(R.id.nav_appointments);
         } else {
             // Otherwise, exit the app
             super.onBackPressed();
+        }
+    }
+
+    /**
+     * Create a User object manually from a DocumentSnapshot to avoid @DocumentId issues
+     */
+    private User createUserFromDocument(DocumentSnapshot documentSnapshot) {
+        try {
+            Map<String, Object> userData = documentSnapshot.getData();
+            if (userData == null) {
+                Log.e(TAG, "createUserFromDocument: userData is null");
+                return null;
+            }
+
+            User user = new User();
+            user.setUid(documentSnapshot.getId()); // Set the document ID
+
+            // Manually map fields from document to User object
+            if (userData.containsKey("email")) {
+                user.setEmail((String) userData.get("email"));
+            }
+            if (userData.containsKey("fullName")) {
+                user.setFullName((String) userData.get("fullName"));
+            } else if (userData.containsKey("name")) {
+                user.setFullName((String) userData.get("name"));
+            }
+            if (userData.containsKey("role")) {
+                Object roleObj = userData.get("role");
+                if (roleObj instanceof Long) {
+                    user.setRole(((Long) roleObj).intValue());
+                } else if (roleObj instanceof Integer) {
+                    user.setRole((Integer) roleObj);
+                }
+            }
+            if (userData.containsKey("status")) {
+                Object statusObj = userData.get("status");
+                if (statusObj instanceof Long) {
+                    user.setStatus(((Long) statusObj).intValue());
+                } else if (statusObj instanceof Integer) {
+                    user.setStatus((Integer) statusObj);
+                }
+            }
+
+            // Add other fields as needed
+            if (userData.containsKey("photoUrl")) {
+                user.setPhotoUrl((String) userData.get("photoUrl"));
+            } else if (userData.containsKey("profileImageUrl")) {
+                user.setPhotoUrl((String) userData.get("profileImageUrl"));
+            }
+            if (userData.containsKey("phone")) {
+                // Decrypt phone number from database
+                String encryptedPhone = (String) userData.get("phone");
+                String decryptedPhone = com.example.patienttracker.utils.EncryptionUtil.decryptData(encryptedPhone);
+                user.setPhone(decryptedPhone);
+            }
+
+            // Support both doctor and patient specific fields
+            if (userData.containsKey("specialization")) {
+                user.setSpecialization((String) userData.get("specialization"));
+            }
+            if (userData.containsKey("department")) {
+                user.setDepartment((String) userData.get("department"));
+            }
+            if (userData.containsKey("yearsOfExperience")) {
+                Object expObj = userData.get("yearsOfExperience");
+                if (expObj instanceof Long) {
+                    user.setYearsOfExperience(((Long) expObj).intValue());
+                } else if (expObj instanceof Integer) {
+                    user.setYearsOfExperience((Integer) expObj);
+                }
+            }
+
+            // Add physical information
+            if (userData.containsKey("address")) {
+                user.setAddress((String) userData.get("address"));
+            }
+            if (userData.containsKey("gender")) {
+                user.setGender((String) userData.get("gender"));
+            }
+            if (userData.containsKey("dateOfBirth")) {
+                user.setDateOfBirth((String) userData.get("dateOfBirth"));
+            }
+            if (userData.containsKey("fathersName")) {
+                user.setFathersName((String) userData.get("fathersName"));
+            }
+            if (userData.containsKey("bloodType")) {
+                user.setBloodType((String) userData.get("bloodType"));
+            }
+
+            // Handle numeric measurements with different possible types
+            if (userData.containsKey("weight")) {
+                Object weightObj = userData.get("weight");
+                if (weightObj instanceof Double) {
+                    user.setWeight((Double) weightObj);
+                } else if (weightObj instanceof Long) {
+                    user.setWeight(((Long) weightObj).doubleValue());
+                } else if (weightObj instanceof Integer) {
+                    user.setWeight(((Integer) weightObj).doubleValue());
+                } else if (weightObj instanceof String) {
+                    try {
+                        user.setWeight(Double.parseDouble((String) weightObj));
+                    } catch (NumberFormatException e) {
+                        Log.w(TAG, "Could not parse weight from string: " + weightObj);
+                    }
+                }
+            }
+
+            if (userData.containsKey("height")) {
+                Object heightObj = userData.get("height");
+                if (heightObj instanceof Double) {
+                    user.setHeight((Double) heightObj);
+                } else if (heightObj instanceof Long) {
+                    user.setHeight(((Long) heightObj).doubleValue());
+                } else if (heightObj instanceof Integer) {
+                    user.setHeight(((Integer) heightObj).doubleValue());
+                } else if (heightObj instanceof String) {
+                    try {
+                        user.setHeight(Double.parseDouble((String) heightObj));
+                    } catch (NumberFormatException e) {
+                        Log.w(TAG, "Could not parse height from string: " + heightObj);
+                    }
+                }
+            }
+
+            // Print user data for debugging
+            Log.d(TAG, "Created user from document: " + user.toString());
+
+            return user;
+        } catch (Exception e) {
+            Log.e(TAG, "Error creating user from document: " + e.getMessage(), e);
+            return null;
+        }
+    }
+
+    /**
+     * Helper method to manually create an Appointment from a Firestore DocumentSnapshot
+     * to avoid issues with @DocumentId and other Firestore deserialization problems
+     */
+    private Appointment createAppointmentFromDocument(DocumentSnapshot documentSnapshot) {
+        try {
+            Map<String, Object> data = documentSnapshot.getData();
+            if (data == null) {
+                Log.e(TAG, "createAppointmentFromDocument: data is null");
+                return null;
+            }
+
+            Appointment appointment = new Appointment();
+            appointment.setId(documentSnapshot.getId()); // Set document ID
+
+            // Map patient info
+            if (data.containsKey("patientId")) {
+                appointment.setPatientId((String) data.get("patientId"));
+            }
+            if (data.containsKey("patientName")) {
+                appointment.setPatientName((String) data.get("patientName"));
+            }
+
+            // Map doctor info
+            if (data.containsKey("doctorId")) {
+                appointment.setDoctorId((String) data.get("doctorId"));
+            }
+            if (data.containsKey("doctorName")) {
+                appointment.setDoctorName((String) data.get("doctorName"));
+            }
+
+            // Map date/time fields
+            if (data.containsKey("dateTime")) {
+                Object dateTimeObj = data.get("dateTime");
+                if (dateTimeObj instanceof Timestamp) {
+                    appointment.setDateTime((Timestamp) dateTimeObj);
+                } else if (dateTimeObj instanceof Map) {
+                    // Handle server timestamp
+                    Map<String, Object> timestampMap = (Map<String, Object>) dateTimeObj;
+                    if (timestampMap.containsKey("seconds") && timestampMap.containsKey("nanoseconds")) {
+                        long seconds = ((Number) timestampMap.get("seconds")).longValue();
+                        int nanoseconds = ((Number) timestampMap.get("nanoseconds")).intValue();
+                        appointment.setDateTime(new Timestamp(seconds, nanoseconds));
+                    }
+                } else if (dateTimeObj != null) {
+                    Log.w("PatientDashboardActivity", "DateTime is not a Timestamp or Map: " + dateTimeObj.getClass().getName());
+                }
+            }
+
+            if (data.containsKey("date")) {
+                Object dateObj = data.get("date");
+                if (dateObj instanceof Timestamp) {
+                    appointment.setDate((Timestamp) dateObj);
+                } else if (dateObj instanceof Map) {
+                    // Handle server timestamp
+                    Map<String, Object> timestampMap = (Map<String, Object>) dateObj;
+                    if (timestampMap.containsKey("seconds") && timestampMap.containsKey("nanoseconds")) {
+                        long seconds = ((Number) timestampMap.get("seconds")).longValue();
+                        int nanoseconds = ((Number) timestampMap.get("nanoseconds")).intValue();
+                        appointment.setDate(new Timestamp(seconds, nanoseconds));
+                    }
+                } else if (dateObj != null) {
+                    Log.w("PatientDashboardActivity", "Date is not a Timestamp or Map: " + dateObj.getClass().getName());
+                }
+            }
+            if (data.containsKey("time")) {
+                appointment.setTime((String) data.get("time"));
+            }
+
+            // Map appointment details
+            if (data.containsKey("appointmentType")) {
+                appointment.setAppointmentType((String) data.get("appointmentType"));
+            }
+            if (data.containsKey("notes")) {
+                appointment.setNotes((String) data.get("notes"));
+            }
+            if (data.containsKey("reason")) {
+                appointment.setReason((String) data.get("reason"));
+            }
+            if (data.containsKey("status")) {
+                appointment.setStatus((String) data.get("status"));
+            }
+            if (data.containsKey("createdAt")) {
+                Object createdAtObj = data.get("createdAt");
+                if (createdAtObj instanceof Timestamp) {
+                    appointment.setCreatedAt((Timestamp) createdAtObj);
+                } else if (createdAtObj instanceof Map) {
+                    // Handle server timestamp
+                    Map<String, Object> timestampMap = (Map<String, Object>) createdAtObj;
+                    if (timestampMap.containsKey("seconds") && timestampMap.containsKey("nanoseconds")) {
+                        long seconds = ((Number) timestampMap.get("seconds")).longValue();
+                        int nanoseconds = ((Number) timestampMap.get("nanoseconds")).intValue();
+                        appointment.setCreatedAt(new Timestamp(seconds, nanoseconds));
+                    }
+                } else if (createdAtObj != null) {
+                    Log.w("PatientDashboardActivity", "CreatedAt is not a Timestamp or Map: " + createdAtObj.getClass().getName());
+                }
+            }
+
+            return appointment;
+        } catch (Exception e) {
+            Log.e(TAG, "Error creating appointment from document: " + e.getMessage(), e);
+            return null;
         }
     }
 }

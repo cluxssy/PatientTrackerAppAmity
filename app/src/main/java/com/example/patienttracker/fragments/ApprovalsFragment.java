@@ -115,10 +115,9 @@ public class ApprovalsFragment extends Fragment implements ApprovalActionListene
 
             for (DocumentSnapshot doc : snapshots) {
                 try {
-                    User doctor = doc.toObject(User.class);
+                    // Don't use toObject to avoid @DocumentId issues
+                    User doctor = createUserFromDocument(doc);
                     if (doctor != null) {
-                        // Make sure we set the UID since it's not automatically mapped
-                        doctor.setUid(doc.getId());
                         pendingDoctorsList.add(doctor);
                     }
                 } catch (Exception parseException) {
@@ -185,10 +184,9 @@ public class ApprovalsFragment extends Fragment implements ApprovalActionListene
         FirebaseUtil.getCurrentUserDocument().get()
                 .addOnSuccessListener(documentSnapshot -> {
                     try {
-                        User currentAdmin = documentSnapshot.toObject(User.class);
+                        // Don't use toObject to avoid @DocumentId issues
+                        User currentAdmin = createUserFromDocument(documentSnapshot);
                         if (currentAdmin != null) {
-                            // Make sure we set the UID since it's not automatically mapped
-                            currentAdmin.setUid(documentSnapshot.getId());
 
                             String adminName = currentAdmin.getFullName();
                             String title = isApproved ? "Account Approved" : "Account Rejected";
@@ -277,5 +275,59 @@ public class ApprovalsFragment extends Fragment implements ApprovalActionListene
             Log.d(TAG, "Firestore listener removed on destroy");
         }
         super.onDestroyView();
+    }
+
+    /**
+     * Create a User object manually from a DocumentSnapshot to avoid @DocumentId issues
+     */
+    private User createUserFromDocument(DocumentSnapshot documentSnapshot) {
+        try {
+            Map<String, Object> userData = documentSnapshot.getData();
+            if (userData == null) {
+                Log.e(TAG, "createUserFromDocument: userData is null");
+                return null;
+            }
+
+            User user = new User();
+            user.setUid(documentSnapshot.getId()); // Set the document ID
+
+            // Manually map fields from document to User object
+            if (userData.containsKey("email")) {
+                user.setEmail((String) userData.get("email"));
+            }
+            if (userData.containsKey("fullName")) {
+                user.setFullName((String) userData.get("fullName"));
+            }
+            if (userData.containsKey("role")) {
+                Object roleObj = userData.get("role");
+                if (roleObj instanceof Long) {
+                    user.setRole(((Long) roleObj).intValue());
+                } else if (roleObj instanceof Integer) {
+                    user.setRole((Integer) roleObj);
+                }
+            }
+            if (userData.containsKey("status")) {
+                Object statusObj = userData.get("status");
+                if (statusObj instanceof Long) {
+                    user.setStatus(((Long) statusObj).intValue());
+                } else if (statusObj instanceof Integer) {
+                    user.setStatus((Integer) statusObj);
+                }
+            }
+            if (userData.containsKey("specialization")) {
+                user.setSpecialization((String) userData.get("specialization"));
+            }
+            if (userData.containsKey("photoUrl")) {
+                user.setPhotoUrl((String) userData.get("photoUrl"));
+            }
+            if (userData.containsKey("phone")) {
+                user.setPhone((String) userData.get("phone"));
+            }
+
+            return user;
+        } catch (Exception e) {
+            Log.e(TAG, "Error creating user from document: " + e.getMessage(), e);
+            return null;
+        }
     }
 }

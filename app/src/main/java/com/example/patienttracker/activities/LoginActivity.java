@@ -18,6 +18,8 @@ import com.example.patienttracker.models.User;
 import com.example.patienttracker.utils.FirebaseUtil;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentSnapshot;
+import java.util.Map;
 
 /**
  * Activity for user login
@@ -160,7 +162,8 @@ public class LoginActivity extends AppCompatActivity {
                     .addOnSuccessListener(documentSnapshot -> {
                         try {
                             if (documentSnapshot.exists()) {
-                                User user = documentSnapshot.toObject(User.class);
+                                // Don't use toObject to avoid @DocumentId issues
+                                User user = createUserFromDocument(documentSnapshot);
                                 if (user != null) {
                                     navigateToDashboard(user);
                                 } else {
@@ -311,5 +314,61 @@ public class LoginActivity extends AppCompatActivity {
         loginButton.setEnabled(!show);
         registerTextView.setEnabled(!show);
         forgotPasswordTextView.setEnabled(!show);
+    }
+
+    /**
+     * Create a User object manually from a DocumentSnapshot to avoid @DocumentId issues
+     */
+    private User createUserFromDocument(DocumentSnapshot documentSnapshot) {
+        try {
+            Map<String, Object> userData = documentSnapshot.getData();
+            if (userData == null) {
+                Log.e(TAG, "createUserFromDocument: userData is null");
+                return null;
+            }
+
+            User user = new User();
+            user.setUid(documentSnapshot.getId()); // Set the document ID
+
+            // Manually map fields from document to User object
+            if (userData.containsKey("email")) {
+                user.setEmail((String) userData.get("email"));
+            }
+            if (userData.containsKey("fullName")) {
+                user.setFullName((String) userData.get("fullName"));
+            }
+            if (userData.containsKey("role")) {
+                Object roleObj = userData.get("role");
+                if (roleObj instanceof Long) {
+                    user.setRole(((Long) roleObj).intValue());
+                } else if (roleObj instanceof Integer) {
+                    user.setRole((Integer) roleObj);
+                }
+            }
+            if (userData.containsKey("status")) {
+                Object statusObj = userData.get("status");
+                if (statusObj instanceof Long) {
+                    user.setStatus(((Long) statusObj).intValue());
+                } else if (statusObj instanceof Integer) {
+                    user.setStatus((Integer) statusObj);
+                }
+            }
+
+            // Add other fields as needed
+            if (userData.containsKey("photoUrl")) {
+                user.setPhotoUrl((String) userData.get("photoUrl"));
+            }
+            if (userData.containsKey("phone")) {
+                // Decrypt phone number from database
+                String encryptedPhone = (String) userData.get("phone");
+                String decryptedPhone = com.example.patienttracker.utils.EncryptionUtil.decryptData(encryptedPhone);
+                user.setPhone(decryptedPhone);
+            }
+
+            return user;
+        } catch (Exception e) {
+            Log.e(TAG, "Error creating user from document: " + e.getMessage(), e);
+            return null;
+        }
     }
 }
